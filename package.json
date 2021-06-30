@@ -1,0 +1,24 @@
+{
+  "name": "serverless_twitch_to_discord_webhooks",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "serverless-iam-roles-per-function": "^3.2.0",
+    "serverless-python-requirements": "^5.1.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayfry1077/serverless_twitch_to_discord_webhooks.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jayfry1077/serverless_twitch_to_discord_webhooks/issues"
+  },
+  "homepage": "https://github.com/jayfry1077/serverless_twitch_to_discord_webhooks#readme"
+}

@@ -7,9 +7,12 @@ provider:
   runtime: python3.8
   lambdaHashingVersion: 20201221
 
+  tags:
+    application: Twitch Events
+
 functions:
   twitchOnline:
-    handler: handler.online
+    handler: twitch_callback.online
     events:
       - httpApi:
           method: POST
@@ -20,8 +23,56 @@ functions:
           - ssm:GetParameter
         Resource:
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/webhook/secret
+      - Effect: Allow
+        Action:
+          - events:PutEvents
+        Resource:
+          - !GetAtt twitchEventBus.Arn
+
+  eventHandler:
+    handler: event_handler.main
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - ssm:GetParameter
+        Resource:
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/discord/callback
 
 plugins:
   - serverless-python-requirements
   - serverless-iam-roles-per-function
+
+resources:
+  Resources:
+    twitchEventBus:
+      Type: AWS::Events::EventBus
+      Properties:
+        Name: serverless-twitch-to-discord-webhooks-${sls:stage}
+
+    twitchDiscoverer:
+      Type: AWS::EventSchemas::Discoverer
+      Properties:
+        Description: Discovers twitch event bus events
+        SourceArn: !GetAtt twitchEventBus.Arn
+
+    twitchEventRule:
+      Type: AWS::Events::Rule
+      Properties:
+        Name: twitchEventRule
+        Description: Forwards twitch events to event_handler lambda
+        EventBusName: !Ref twitchEventBus
+        EventPattern:
+          source:
+            - twitch.all.events
+        State: ENABLED
+        Targets:
+          - Arn: !GetAtt EventHandlerLambdaFunction.Arn
+            Id: Twitch
+
+    InvokeEventHandlerLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        FunctionName: !Ref EventHandlerLambdaFunction
+        Principal: events.amazonaws.com
+        SourceArn: !GetAtt twitchEventRule.Arn

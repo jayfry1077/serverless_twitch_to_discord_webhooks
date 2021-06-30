@@ -4,21 +4,29 @@ import hashlib
 from aws_lambda_powertools.utilities import parameters
 from aws_lambda_powertools import Logger
 import os
-import requests
+import boto3
 
 logger = Logger(service='twitch-discord-callback')
 
 STAGE = os.environ.get('STAGE', 'dev')
+EVENT_BUS = f'serverless-twitch-to-discord-webhooks-{STAGE}'
 webhook_secret = parameters.get_parameter(
     f'/{STAGE}/twitch/webhook/secret', decrypt=True)
-discord_callback_url = parameters.get_parameter(
-    f'/{STAGE}/discord/callback', decrypt=True)
+
+event_bridge = boto3.client('events')
 
 
-def call_discord(discord_webhook, data):
-    res = requests.post(discord_webhook, json=data, headers={
-                        'Content-type': 'application/json'})
-    print('Response ' + res.text)
+def send_event_bridge_event(event_body):
+    event = [{
+        'Source': 'twitch.all.events',
+        'DetailType': 'twitch',
+        'Detail': event_body,
+        'EventBusName': EVENT_BUS
+    }]
+    try:
+        event_bridge.put_events(Entries=event)
+    except Exception as e:
+        logger.error(e)
 
 
 def valid_signature(headers, event_body):
@@ -55,7 +63,13 @@ def online(event, context):
         logger.error('Signature mistach.')
         return {"statusCode": 403}
 
-    call_discord(discord_callback_url, {
-                 "content": "@everyone\nEmjayInk went live on twitch!\nhttps://www.twitch.tv/emjayink"})
+    if headers['twitch-eventsub-message-type'] == 'webhook_callback_verification':
+        return event_body['challenge']
 
-    return event_body['challenge']
+    # Not going to send a failure to twitch if the event put fails
+    try:
+        send_event_bridge_event(event['body'])
+    except:
+        return {"statusCode": 200}
+
+    return {"statusCode": 200}
