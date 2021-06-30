@@ -15,4 +15,4 @@ class stream_online():
         self.event = event
 
     def execute(self):
-        call_discord(discord_callback_url, self.event['event'])
+        call_discord(discord_callback_url, self.event['detail']['event'])
