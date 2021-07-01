@@ -37,6 +37,7 @@ functions:
           - ssm:GetParameter
         Resource:
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/discord/callback
+          - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/*
 
 plugins:
   - serverless-python-requirements
