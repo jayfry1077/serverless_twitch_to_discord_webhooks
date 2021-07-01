@@ -7,11 +7,11 @@ from shared.twitch_utils import get_live_stream_info
 
 STAGE = os.environ.get('STAGE', 'dev')
 logger = Logger(service='stream-online-event-handler')
-discord_callback_url = parameters.get_parameter(
-    f'/{STAGE}/discord/callback', decrypt=True)
 
 
 def main(event, context):
+    discord_callback_url = parameters.get_parameter(
+        f'/{STAGE}/discord/callback', decrypt=True)
 
     broadcaster_id = event['detail']['event']['broadcaster_user_id']
     broadcaster_name = event['detail']['event']['broadcaster_user_name']
@@ -23,11 +23,13 @@ def main(event, context):
     try:
         live_stream_info = get_live_stream_info(broadcaster_id)
         title = ''
+        game_name = 'game name not found'
         # To handle the usecase where a streamer goes live, but we were unable to retrieve their stream title for some reason.
         if len(live_stream_info) != 0:
-            title = live_stream_info[0]["title"]
+            title = f'\n{live_stream_info[0]["title"]}'
+            game_name = live_stream_info[0]['game_name']
 
-        discord_message = f':red_circle: {broadcaster_name} is live!\n{title}\nhttps://www.twitch.tv/{broadcaster_url_id}'
+        discord_message = f'{broadcaster_name} is live - {game_name}{title}\nhttps://www.twitch.tv/{broadcaster_url_id}'
 
         call_discord(discord_callback_url, discord_message)
 
