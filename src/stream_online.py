@@ -25,7 +25,7 @@ def main(event, context):
         title = ''
         # To handle the usecase where a streamer goes live, but we were unable to retrieve their stream title for some reason.
         if len(live_stream_info) != 0:
-            title = live_stream_info["title"]
+            title = live_stream_info[0]["title"]
 
         discord_message = f':red_circle: {broadcaster_name} is live!\n{title}\nhttps://www.twitch.tv/{broadcaster_url_id}'
 
