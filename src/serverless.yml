@@ -29,8 +29,8 @@ functions:
         Resource:
           - !GetAtt twitchEventBus.Arn
 
-  eventHandler:
-    handler: event_handler.main
+  streamOnline:
+    handler: stream_online.main
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -55,24 +55,23 @@ resources:
         Description: Discovers twitch event bus events
         SourceArn: !GetAtt twitchEventBus.Arn
 
-    twitchEventRule:
+    onlineEventRule:
       Type: AWS::Events::Rule
       Properties:
-        Name: twitchEventRule
         Description: Forwards twitch events to event_handler lambda
         EventBusName: !Ref twitchEventBus
         EventPattern:
           source:
-            - twitch.all.events
+            - stream.online
         State: ENABLED
         Targets:
-          - Arn: !GetAtt EventHandlerLambdaFunction.Arn
+          - Arn: !GetAtt StreamOnlineLambdaFunction.Arn
             Id: Twitch
 
     InvokeEventHandlerLambdaPermission:
       Type: AWS::Lambda::Permission
       Properties:
         Action: lambda:invokeFunction
-        FunctionName: !Ref EventHandlerLambdaFunction
+        FunctionName: !Ref StreamOnlineLambdaFunction
         Principal: events.amazonaws.com
-        SourceArn: !GetAtt twitchEventRule.Arn
+        SourceArn: !GetAtt onlineEventRule.Arn

@@ -17,8 +17,11 @@ event_bridge = boto3.client('events')
 
 
 def send_event_bridge_event(event_body):
+
+    source = json.loads(event_body)
+
     event = [{
-        'Source': 'twitch.all.events',
+        'Source': source['subscription']['type'],
         'DetailType': 'twitch',
         'Detail': event_body,
         'EventBusName': EVENT_BUS
