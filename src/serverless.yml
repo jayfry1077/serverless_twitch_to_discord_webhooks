@@ -31,6 +31,8 @@ functions:
 
   streamOnline:
     handler: stream_online.main
+    environment:
+      DISCORD_CALLBACKS_TABLE: !Ref discordCallbacks
     iamRoleStatements:
       - Effect: "Allow"
         Action:
@@ -38,6 +40,11 @@ functions:
         Resource:
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/discord/callback
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/*
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - !GetAtt discordCallbacks.Arn
 
 plugins:
   - serverless-python-requirements
@@ -76,3 +83,13 @@ resources:
         FunctionName: !Ref StreamOnlineLambdaFunction
         Principal: events.amazonaws.com
         SourceArn: !GetAtt onlineEventRule.Arn
+
+    discordCallbacks:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
