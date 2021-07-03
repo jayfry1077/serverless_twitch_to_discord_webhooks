@@ -12,6 +12,7 @@ CLIENT_SECRET = parameters.get_parameter(
     f'/{STAGE}/twitch/client/secret', decrypt=True)
 TWITCH_OAUTH_URL = 'https://id.twitch.tv/oauth2/token'
 TWITCH_STREAMER_URL = 'https://api.twitch.tv/helix/streams'
+STREAMER_INFO_URL = 'https://api.twitch.tv/helix/users'
 
 
 def get_bearer_token():
@@ -36,3 +37,15 @@ def get_live_stream_info(stremer_id):
     logger.info(res)
 
     return res['data']
+
+
+def get_streamer_info(streamer_login=str):
+
+    params = {'login': streamer_login}
+    headers = {'Client-ID': CLIENT_ID,
+               'Authorization': f'Bearer {get_bearer_token()}'}
+
+    res = requests.get(STREAMER_INFO_URL,
+                       params=params, headers=headers).json()
+
+    return res['data'][0]['profile_image_url']
