@@ -42,7 +42,7 @@ functions:
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/*
       - Effect: Allow
         Action:
-          - dynamodb:Query
+          - dynamodb:GetItem
         Resource:
           - !GetAtt discordCallbacks.Arn
 
