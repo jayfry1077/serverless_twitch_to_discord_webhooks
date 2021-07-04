@@ -34,8 +34,6 @@ def get_live_stream_info(stremer_id):
     res = requests.get(TWITCH_STREAMER_URL, params=params,
                        headers=headers).json()
 
-    logger.info(res)
-
     return res['data']
 
 

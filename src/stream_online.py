@@ -1,10 +1,9 @@
 import os
-from aws_lambda_powertools.utilities import parameters
 from aws_lambda_powertools import Logger
-from shared.discord_utils import call_discord
 from shared.twitch_utils import get_live_stream_info, get_streamer_info
-from shared.dynamo_utils import get_url
-from shared.guilded_utils import call_guilded
+from shared.dynamo_utils import get_callbacks
+from factory.callbacks import CallbackFactory
+import requests
 
 
 STAGE = os.environ.get('STAGE', 'dev')
@@ -14,31 +13,29 @@ logger = Logger(service='stream-online-event-handler')
 def main(event, context):
 
     broadcaster_id = event['detail']['event']['broadcaster_user_id']
-
-    callback_url = get_url(broadcaster_id)
+    callbacks = get_callbacks(broadcaster_id)
 
     broadcaster_name = event['detail']['event']['broadcaster_user_name']
     broadcaster_url_id = event['detail']['event']['broadcaster_user_login']
     profile_image_url = get_streamer_info(broadcaster_url_id)
 
     logger.info(
-        f'Streamer [{broadcaster_name}] went live, sending discord notification')
+        f'Streamer [{broadcaster_name}] went live, sending notification(s)')
 
-    try:
-        live_stream_info = get_live_stream_info(broadcaster_id)
-        title = ''
-        game_name = 'game name not found'
-        # To handle the usecase where a streamer goes live, but we were unable to retrieve their stream title for some reason.
-        if len(live_stream_info) != 0:
-            title = f'{live_stream_info[0]["title"]}'
-            game_name = live_stream_info[0]['game_name']
+    for callback in callbacks:
+        try:
+            live_stream_info = get_live_stream_info(broadcaster_id)
 
-        call_guilded(
-            callback_url, f'{broadcaster_name} is live - {game_name}', f'{title}', f'https://www.twitch.tv/{broadcaster_url_id}', profile_image_url)
+            broadcaster = {'broadcaster_id': broadcaster_id, 'broadcaster_name': broadcaster_name,
+                           'broadcaster_url_id': broadcaster_url_id, 'profile_image_url': profile_image_url,
+                           'callback': callback, 'live_stream_info': live_stream_info}
 
-        # discord_message = f'{broadcaster_name} is live - {game_name}{title}\nhttps://www.twitch.tv/{broadcaster_url_id}'
+            callback_message = CallbackFactory().serialize(broadcaster)
 
-        # call_discord(callback_url, discord_message)
+            response = requests.post(callback['url'], json=callback_message, headers={
+                'Content-type': 'application/json'})
 
-    except Exception as e:
-        logger.error(e)
+            logger.info('Response ' + response.text)
+
+        except Exception as e:
+            logger.error(e)

@@ -2,25 +2,26 @@ import boto3
 import os
 from botocore.exceptions import ClientError
 
-dynamo = boto3.client('dynamodb')
+dynamodb = boto3.resource('dynamodb')
 DISCORD_CALLBACKS_TABLE = os.environ.get('DISCORD_CALLBACKS_TABLE')
+table = dynamodb.Table(DISCORD_CALLBACKS_TABLE)
 
 
-def get_url(streamer_id):
+def get_callbacks(streamer_id=str) -> list:
 
     try:
-        response = dynamo.query(
-            TableName=DISCORD_CALLBACKS_TABLE,
-            KeyConditionExpression='#pk = :pk',
-            ExpressionAttributeNames={
-                '#pk': 'PK',
-            },
-            ExpressionAttributeValues={
-                ':pk': {'S': streamer_id},
-            }
+        response = table.get_item(
+            Key={'PK': streamer_id},
+            ProjectionExpression='callbacks'
         )
 
-        return response['Items'][0]['callback_url']['S']
+        if 'Item' not in response.keys():
+            raise Exception(f'No callbacks for user {streamer_id}')
+
+        if len(response['Item']['callbacks']) == 0:
+            raise Exception(f'No callbacks for user {streamer_id}')
+
+        return response['Item']['callbacks']
 
     except ClientError as e:
         raise Exception(f'Error while getting callback: {e}')
