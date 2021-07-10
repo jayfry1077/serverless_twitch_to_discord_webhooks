@@ -6,6 +6,8 @@ provider:
   name: aws
   runtime: python3.8
   lambdaHashingVersion: 20201221
+  environment:
+    STAGE: ${sls:stage}
 
   tags:
     application: Twitch Events
@@ -23,11 +25,51 @@ functions:
           - ssm:GetParameter
         Resource:
           - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/webhook/secret
+          - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/*
       - Effect: Allow
         Action:
           - events:PutEvents
         Resource:
           - !GetAtt twitchEventBus.Arn
+  
+  signUp:
+    handler: signup.main
+    events:
+      - httpApi:
+          method: POST
+          path: /v1/signup
+    layers:
+      - arn:aws:lambda:us-east-1:#{AWS::AccountId}:layer:salt:1
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - events:PutEvents
+        Resource:
+          - !GetAtt twitchEventBus.Arn
+      - Effect: "Allow"
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/discord/*
+
+  discordCB:
+    handler: discord_callback.main
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - ssm:GetParameter
+        Resource:
+          - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/twitch/*
+          - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/discord/*
+          - arn:aws:ssm:us-east-1:*:parameter/${sls:stage}/guilded/*
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+          - dynamodb:UpdateItem
+          - dynamodb:GetItem
+        Resource:
+          - !GetAtt discordCallbacks.Arn
+      
 
   streamOnline:
     handler: stream_online.main
@@ -49,6 +91,7 @@ functions:
 plugins:
   - serverless-python-requirements
   - serverless-iam-roles-per-function
+  - serverless-pseudo-parameters
 
 resources:
   Resources:
@@ -76,6 +119,19 @@ resources:
           - Arn: !GetAtt StreamOnlineLambdaFunction.Arn
             Id: Twitch
 
+    signupEventRule:
+      Type: AWS::Events::Rule
+      Properties:
+        Description: signs up users for twitch callbacks from discord slash commands
+        EventBusName: !Ref twitchEventBus
+        EventPattern:
+          source:
+            - discord.signup
+        State: ENABLED
+        Targets:
+          - Arn: !GetAtt DiscordCBLambdaFunction.Arn
+            Id: Discord
+
     InvokeEventHandlerLambdaPermission:
       Type: AWS::Lambda::Permission
       Properties:
@@ -83,6 +139,14 @@ resources:
         FunctionName: !Ref StreamOnlineLambdaFunction
         Principal: events.amazonaws.com
         SourceArn: !GetAtt onlineEventRule.Arn
+
+    InvokeEventHandlerLambdaPermissionDiscordSignup:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        FunctionName: !Ref DiscordCBLambdaFunction
+        Principal: events.amazonaws.com
+        SourceArn: !GetAtt signupEventRule.Arn
 
     discordCallbacks:
       Type: AWS::DynamoDB::Table

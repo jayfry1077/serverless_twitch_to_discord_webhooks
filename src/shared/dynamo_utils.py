@@ -25,3 +25,20 @@ def get_callbacks(streamer_id=str) -> list:
 
     except ClientError as e:
         raise Exception(f'Error while getting callback: {e}')
+
+
+def put_subscription(streamer_id, streamer_name, callbacks):
+
+    try:
+        response = table.put_item(
+            Item={
+                'PK': streamer_id,
+                'callbacks': callbacks,
+                'streamer': streamer_name
+            }
+        )
+
+        return response
+
+    except ClientError as e:
+        raise Exception(f'Error while writing subscription: {e}')

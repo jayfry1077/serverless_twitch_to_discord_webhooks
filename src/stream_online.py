@@ -11,6 +11,7 @@ logger = Logger(service='stream-online-event-handler')
 
 
 def main(event, context):
+    logger.info(event)
 
     broadcaster_id = event['detail']['event']['broadcaster_user_id']
     callbacks = get_callbacks(broadcaster_id)
@@ -27,7 +28,7 @@ def main(event, context):
             live_stream_info = get_live_stream_info(broadcaster_id)
 
             broadcaster = {'broadcaster_id': broadcaster_id, 'broadcaster_name': broadcaster_name,
-                           'broadcaster_url_id': broadcaster_url_id, 'profile_image_url': profile_image_url,
+                           'broadcaster_url_id': broadcaster_url_id, 'profile_image_url': profile_image_url[0]['profile_image_url'],
                            'callback': callback, 'live_stream_info': live_stream_info}
 
             callback_message = CallbackFactory().serialize(broadcaster)
